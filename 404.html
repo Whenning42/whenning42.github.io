@@ -1,0 +1,14 @@
+<!-- Redirect 404s to the lower case of the original url. 
+We do this since github pages is case sensitive, but we
+want our url scheme to be insensitive. -->
+
+<script>
+    window.onload = () => {
+        currentURL = window.location.href;
+        lowerCaseURL = currentURL.toLowerCase();
+        if (currentURL != lowerCaseURL) {
+            location.replace(lowerCaseURL);
+        }
+    };
+</script>
+
