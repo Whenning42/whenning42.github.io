@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Difficulty Browser</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="toolbar">
+      <div class="filter-group">
+        <label for="language">Language:</label>
+        <select id="language">
+          <option value="any">Any</option>
+          <option value="en">English</option>
+          <option value="de">German</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>Difficulty:</label>
+        <div class="difficulty-inputs">
+          <select id="min-diff"></select>
+          <span>to</span>
+          <select id="max-diff"></select>
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <label for="sort">Sort By:</label>
+        <select id="sort">
+          <option value="title-asc">Title A → Z</option>
+          <option value="title-desc">Title Z → A</option>
+          <option value="author-asc">Author A → Z</option>
+          <option value="author-desc">Author Z → A</option>
+          <option value="diff-asc">Difficulty 0 → 12</option>
+          <option value="diff-desc">Difficulty 12 → 0</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main id="book-list"></main>
+
+  <script>
+    let books = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch('./books.json');
+        books = await response.json();
+        render();
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      }
+    }
+
+    /* -------------- build difficulty dropdown options ------------ */
+    const minSel = document.getElementById("min-diff");
+    const maxSel = document.getElementById("max-diff");
+
+    for (let i = 0; i <= 15; i++) {
+      const opt1 = document.createElement("option");
+      opt1.value = i;
+      opt1.textContent = i;
+      const opt2 = document.createElement("option");
+      opt2.value = i;
+      opt2.textContent = i;
+      minSel.appendChild(opt1);
+      maxSel.appendChild(opt2);
+    }
+
+    minSel.value = 0;
+    maxSel.value = 15;
+
+    /* --------------------- helpers ------------------------------ */
+    function getDifficultyColor(d) {
+      if (d < 3) return getComputedStyle(document.documentElement).getPropertyValue("--easy");
+      if (d < 6) return getComputedStyle(document.documentElement).getPropertyValue("--medium");
+      return getComputedStyle(document.documentElement).getPropertyValue("--hard");
+    }
+
+    function render() {
+      const lang = document.getElementById("language").value;
+      const min = parseInt(minSel.value, 10);
+      const max = parseInt(maxSel.value, 10);
+      const sortVal = document.getElementById("sort").value;
+
+      let list = books.filter((b) => {
+        const matchesLanguage = lang === "any" || b.lang === lang;
+        const matchesDifficulty = b.difficulty >= min && b.difficulty <= max;
+        return matchesLanguage && matchesDifficulty;
+      });
+
+      switch (sortVal) {
+        case "title-asc":
+          list.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case "title-desc":
+          list.sort((a, b) => b.title.localeCompare(a.title));
+          break;
+        case "author-asc":
+          list.sort((a, b) => a.author.localeCompare(b.author));
+          break;
+        case "author-desc":
+          list.sort((a, b) => b.author.localeCompare(a.author));
+          break;
+        case "diff-asc":
+          list.sort((a, b) => a.difficulty - b.difficulty);
+          break;
+        case "diff-desc":
+          list.sort((a, b) => b.difficulty - a.difficulty);
+          break;
+        case "random":
+          list.sort(() => Math.random() - 0.5);
+          break;
+      }
+
+      const container = document.getElementById("book-list");
+      container.innerHTML = "";
+
+      if (!list.length) {
+        container.innerHTML = `<p style="text-align:center;color:#777;">No books match your filters.</p>`;
+        return;
+      }
+
+      list.forEach((b) => {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const img = document.createElement("img");
+        img.src = b.thumbnail;
+        img.alt = `${b.title} cover`;
+        img.loading = "lazy";
+        img.className = "thumbnail";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `
+          <h2 class="title">${b.title}</h2>
+          <p class="author">${b.author || ""}</p>
+          <p class="isbn">${b.isbn}</p>
+        `;
+
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = b.difficulty.toFixed(1);
+        badge.style.background = getDifficultyColor(b.difficulty);
+        badge.setAttribute("aria-label", `Difficulty ${b.difficulty}`);
+
+        card.append(img, meta, badge);
+        container.appendChild(card);
+      });
+    }
+
+    /* ------------------- listeners ------------------------------ */
+    ["language", "min-diff", "max-diff", "sort"].forEach((id) =>
+      document.getElementById(id).addEventListener("change", render)
+    );
+
+    loadData();
+  </script>
+</body>
+</html>
